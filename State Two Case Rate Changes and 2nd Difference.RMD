@@ -1,0 +1,138 @@
+---
+title: "Covid Case Rates, 1st and 2nd Differences"
+author: "Brandon Tao"
+date: "10/12/2020"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### 0. Setup
+
+```{r message=FALSE}
+library(tidyverse)
+library(micromapST)
+load('Data/Covid_Rates_Two_Week_Gaps.RData')
+objects()
+```
+
+
+### 1. Arrow plots
+
+Providing the labeling to describe a plot's content
+in constrained spaced often poses a challenge. Shorter labels
+can take up less space and simplify appearance. 
+Here the units of measure label, 'Cases per 100,000' is
+clear but long.  Below the label is shortened to 'Cases per 100K'.  
+
+The grid line labels can also take up space. In this example 
+The units are thousands so 4 digits long.  Rescaling the
+units to percents is thinkable. Then there would be only one
+digit each.  
+
+Scaling Choices can be guided by the target audience. Those in the
+health sciences are likely to think in terms of rates such
+as rate per 100,000 or rate per million.  In criminology
+rates per 1000, and 10,000 are likely more common.  Much of
+public is more familiar with percents.   
+
+The general strategy is have two or maybe three digits to the left of the
+decimal place. This can motivate taking logs. Graphics and 
+and modeling can also call for taking logs.     
+
+Note that micromapST has some options in terms of gridline algorithms and
+the alternating rows of gridline labels avoid overplotting.  
+
+ 
+
+```{r fig.width=7.5, fig.height=10}
+
+
+dat <- as.data.frame(st_caseRates3)
+names(dat)
+
+panelDesc1 <- data.frame(
+  type = c('maptail','id','arrow','arrow','arrow'),
+  lab1 = c('','','Sept. 11 and','Sept. 25 and','Sept. 11 and'),
+  lab2 = c('','','Sept. 25','Oct. 9','Oct. 9 '),
+  lab3 = c('','','Cases per 100K','Cases per 100K','Cases per 100k'),
+  col1 = c(NA,NA,'Sep_11_2020_R','Sep_25_2020_R','Sep_11_2020_R'), 
+  col2 = c(NA,NA,'Sep_25_2020_R','Oct_09_2020_R','Oct_09_2020_R') 
+)
+
+
+micromapST(dat, panelDesc1,
+  rowNamesCol = 'Postal',
+  rowNames = 'ab',
+  sortVar = 'Sep_11_2020_R', ascend = TRUE,
+  title = c("Covid-19: Two-Week Case Rate Changes",
+            "Fridays: Sept. 11 to Oct. 9, 2020 ")
+)
+
+```
+
+Describing the plots will be address in class. The focus here is 
+on plot production.
+  
+I often mistakes in the panel description dataframe.  The micromapST function
+provides feedback that can be helpful in identifying problems. When using an R
+script the feedback is likely to appear on Console.  When using RMD files 
+some feedback appears little panel below the script chuck.  There is very little yellow
+warning triangle in the panel. Clicking on the panel reveals messages.   
+  
+For this example, the message I saw indicated that variables specified were not found.
+That was a good clue. I had typed lower case r's and not upper case R's in the
+variables names.  
+  
+On occasion I misspell the sorting variable name. Then, with no other problems, 
+micromapST will produce the plot without sorting, and provide a warning message. 
+The lack of sorting is obvious in the plot but sometimes people in a hurry
+and assume the plot produced is what they intended.
+
+### 2. Compute First and Second Differences  
+
+For time series, second differences provide discrete analogues to the
+second derivatives in continuous time series.  Trends usually do vary over
+time.  With Covid-19 many variables drive the change in the trends.  We
+don't know them all, and often don't have data on the variables that we
+conjecture. Here we look at just one second difference.  
+
+```{r}
+names(st_caseRates3)
+tib <- select(st_caseRates3,Postal,Sep_11_2020_R:Oct_09_2020_R)
+names(tib)<- c('Postal','Fri1','Fri2','Fri3')
+tibDif <- mutate(tib,
+                dif1=Fri2-Fri1,
+                dif2=Fri3-Fri2,
+                dif3=dif2-dif1)
+```
+
+### 3. Show the differences using micromapST
+
+
+```{r fig.width=7.5, fig.height=10}
+
+
+dat <- as.data.frame(tibDif)
+names(dat)
+
+panelDesc2 <- data.frame(
+  type = c('maptail','id','dot','dot','dot'),
+  lab1 = c('','','Sept. 25 -','Oct. 9 -','Change in'),
+  lab2 = c('','','Sept. 11','Sept. 25','Differences'),
+  lab3 = c('','','Cases per 100K','Cases per 100K','Cases per 100k'),
+  col1 = c(NA,NA,'dif1','dif2','dif3')
+)
+
+
+micromapST(dat, panelDesc2,
+  rowNamesCol = 'Postal', # Use this column
+  rowNames = 'ab',  # Names are State Postal codes 
+  sortVar = 'dif3', ascend = TRUE,
+  title = c("First and Second Case Rate Differences",
+            "Fridays: Sept. 11 to Oct. 9, 2020 ")
+)
+
+```
